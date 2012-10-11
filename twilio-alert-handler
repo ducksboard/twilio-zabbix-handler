@@ -1,0 +1,43 @@
+#!/usr/bin/python
+
+import base64
+import ConfigParser
+import json
+import sys
+import urllib
+import urllib2
+
+
+def make_call(message, number, config):
+    sid, auth_token = config.get('auth', 'sid'), config.get('auth', 'token')
+    url = "https://api.twilio.com/2010-04-01/Accounts/%s/Calls.json" % sid
+    data = urllib.urlencode(
+        {"From": config.get('numbers', 'from'),
+         "To": number,
+         "Url": config.get('urls', 'connect', True) % urllib.quote(message)})
+
+    auth = 'Basic ' + base64.b64encode('%s:%s' % (sid, auth_token))
+    return
+    req = urllib2.Request(url, data, {'Authorization': auth})
+    urllib2.urlopen(req)
+
+
+def main():
+    conffile = __file__ + '.ini'
+    config = ConfigParser.ConfigParser()
+    config.read(conffile)
+
+    recipient, subject, message = sys.argv[1:]
+
+    for number in config.get('numbers', 'to').split(','):
+        make_call(subject, number.strip(), config)
+
+
+if __name__ == "__main__":
+    try:
+        ret = main()
+    except Exception, e:
+        sys.stderr.write("error: %s\n" % e)
+        sys.exit(1)
+    else:
+        sys.exit(0)
